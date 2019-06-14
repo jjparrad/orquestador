@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Built-By: jjparra
+Build-Jdk: 12.0.1
+Implementation-Title: orquestador
+Implementation-Version: 0.0.1-SNAPSHOT
+Implementation-Vendor-Id: com.servicios
+Implementation-URL: https://projects.spring.io/spring-boot/#/spring-boot
+ -starter-parent/orquestador
+Created-By: Maven Integration for Eclipse
+
