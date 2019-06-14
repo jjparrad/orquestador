@@ -1,5 +1,7 @@
 package com.servicios.orquestador.controllers;
 
+import java.util.Date;
+
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +16,7 @@ public class PagosController {
 	
 	private String urlCuentas = "http://localhost:8082/cuentaDeDepositos/";
 	private String urlTarjetas = "http://localhost:8081/tarjetaCredito/";
-	//private String urlRegistros = "http://www.mocky.io/v2/5cec66a5330000165f6d7a8a";
+	private String urlRegistros = "http://localhost:8083/transaccion/";
 	
 	private boolean existeDeuda;
 	
@@ -42,9 +44,15 @@ public class PagosController {
 			return new Pago(saldo, -deuda, "Rechazado: La tarjeta indicada no posee tal deuda");	
 		}
 		
-		//llamarRegistro(ordenPago);
-		return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
+		String date = new Date() + "";
+		Registro registro = new Registro(cuenta, tar, monto, date);
 		
+		if(llamarRegistro(registro)) {
+			return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
+			
+		} else {
+			return new Pago(saldo, deuda, "Aceptado: Pago exitoso (No se pudo registrar el movimiento)");	
+		}
 	}
 	
 	private Double llamarCuenta(String cuenta, double monto) {
@@ -117,18 +125,17 @@ public class PagosController {
 			return -valor;
 		}
 	}
-	/*
-	private boolean llamarRegistro(OrdenPago orden){
-		
-		HttpEntity<String> request = new HttpEntity<String>(orden.toString());
+	
+	private boolean llamarRegistro(Registro registro){
+
+		HttpEntity<Registro> request = new HttpEntity<Registro>(registro);
 		RestTemplate restTemplate = new RestTemplate();
-		ResponseEntity<String> res = restTemplate.exchange(urlRegistros, HttpMethod.POST, request, String.class);
+		ResponseEntity<Object> res = restTemplate.postForEntity(urlRegistros, request, Object.class);
 		
-		if(res.getStatusCodeValue() == 201) {
+		if(res.getStatusCodeValue() == 200) {
 			return true;
 		} else {
 			return false;
 		}
-	}*/
-	
+	}
 }
