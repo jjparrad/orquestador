@@ -23,39 +23,17 @@ public class PagosService {
 	
 	private String urlCuentas = "http://localhost:8082/cuentaDeDepositos/";
 	private String urlTarjetas = "http://localhost:8081/tarjetaCredito/";
-	//private String urlRegistros = "http://www.mocky.io/v2/5cec66a5330000165f6d7a8a";
+	//private String urlRegistros = "http://localhost:8083/transaccion";
+	public boolean existeDeuda;
 	
-	private boolean existeDeuda;
 	
-	
-	public Pago pagar(OrdenPago ordenPago) {
-		double saldo;
-		double deuda;
-		
-		String cuenta = ordenPago.getCuenta();
-		String tarjeta = ordenPago.getTarjeta();
-		double monto = ordenPago.getMonto();
-		
-
-		saldo = llamarCuenta(cuenta, monto);
-		if (saldo < 0){
-			deuda = getDeuda(tarjeta);
-			return new Pago(-saldo, deuda, "Rechazado: Fondos insuficientes");
-		} 
-		
-		
-		deuda = llamarTarjeta(tarjeta, monto);
-		if (deuda < 0 || this.existeDeuda == false) {
-			saldo = devolverFondos(cuenta, monto);
-			return new Pago(saldo, -deuda, "Rechazado: La tarjeta indicada no posee tal deuda");	
-		}
-		
-		//llamarRegistro(ordenPago);
-		return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
-		
-	}
-	
-	private Double llamarCuenta(String cuenta, double monto){
+	/**
+	 *  Método que llama al microservicio de cuentas de depósito
+	 * @param cuenta Número de cuenta a debitar
+	 * @param monto Monto a debitar
+	 * @return Saldo Actual
+	 */
+	public Double llamarCuenta(String cuenta, double monto){
 
 		OrdenCuenta orden = new OrdenCuenta(cuenta, monto);
 			
@@ -71,8 +49,13 @@ public class PagosService {
 		return valor;
 	}
 	
-	
-	private Double devolverFondos(String cuenta, double monto) {
+	/**
+	 * Devuelve fondos a una cuenta de depósito
+	 * @param cuenta Número de cuenta a devolver fondos
+	 * @param monto Cantidad a devolver
+	 * @return Saldo actual
+	 */
+	public Double devolverFondos(String cuenta, double monto) {
 		OrdenCuenta orden = new OrdenCuenta(cuenta, monto);
 			
 		
@@ -87,8 +70,15 @@ public class PagosService {
 		return valor;
 	}
 	
-	private double llamarTarjeta(String tarjeta, double monto) {
-/*
+	
+	//Este es el método en el que se está empezando la implementación del reactivo
+	/**
+	 * Reduce la deuda de una tarjeta de crédito específica
+	 * @param tarjeta Número de tarjeta a reducir deuda
+	 * @param monto Cantitad de deuda a reducir
+	 * @return Deuda restante
+	 */
+	public double llamarTarjeta(String tarjeta, double monto) {
 		OrdenTarjeta orden = new OrdenTarjeta(tarjeta, monto);
 		
 		WebClient cliente = WebClient.create(urlTarjetas);
@@ -104,43 +94,26 @@ public class PagosService {
 			
 	        bodyToMono.subscribe((body) -> {
 	        	
+	        	
+	        	//El método hace el llamado y recibe la información como debería ser
+	        	//El problema es el scope en el que está
+	        	//La idea es que el método pueda retornar el BODY como un DOUBLE. No como un MONO<Double>
 	        	System.out.println("BODY: " + body);
 	        	System.out.println("STATUS CODE: " + status);
-
-	        	
 	        });
 		});
 		
-		
-		return 1.0; */
-		
-		
-		OrdenTarjeta orden = new OrdenTarjeta(tarjeta, monto);
-			
-		
-		HttpEntity<OrdenTarjeta> request = new HttpEntity<OrdenTarjeta>(orden);
-		RestTemplate restTemplate = new RestTemplate();
-		
-		
-		ResponseEntity<Double> res = restTemplate.exchange(urlTarjetas + "pago/" + tarjeta, HttpMethod.PUT, request, Double.class);
-		
-		double valor = res.getBody();
-				
-				
-		if(res.getStatusCodeValue() == 200) {
-			this.existeDeuda = true;
-			return valor;
-		} else {
-			if(valor == 0){
-				this.existeDeuda = false;
-				return 0;
-			}
-			this.existeDeuda = true;
-			return -valor;
-		}
+		// Retorna 1.0 para que se pueda ejecutar. Solamente para que cumpla el "return double"
+		return 1.0; 
 	}
 	
-	private Double getDeuda(String tarjeta) {
+	
+	/**
+	 * Retorna la deuda restante de una tarjeta de crédito específica
+	 * @param tarjeta Número de tarjeta de crédito a consultar
+	 * @return Deuda restante
+	 */
+	public Double getDeuda(String tarjeta) {
 		RestTemplate restTemplate = new RestTemplate();
 		ResponseEntity<Double> res = restTemplate.exchange(urlTarjetas + "deuda/" + tarjeta, HttpMethod.GET, null, Double.class);
 		
@@ -152,7 +125,8 @@ public class PagosService {
 			return -valor;
 		}
 	}
-	/*
+	
+	/* Método aún no integrado
 	private boolean llamarRegistro(OrdenPago orden){
 		
 		HttpEntity<String> request = new HttpEntity<String>(orden.toString());

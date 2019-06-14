@@ -16,6 +16,30 @@ public class PagosController {
 	
 	@PutMapping("/pago")
 	public Pago pagar(@RequestBody OrdenPago ordenPago) {
-		return pagosService.pagar(ordenPago);
+		double saldo;
+		double deuda;
+		
+		String cuenta = ordenPago.getCuenta();
+		String tarjeta = ordenPago.getTarjeta();
+		double monto = ordenPago.getMonto();
+		
+
+		saldo = pagosService.llamarCuenta(cuenta, monto);
+		if (saldo < 0){
+			
+			deuda = pagosService.getDeuda(tarjeta);
+			return new Pago(-saldo, deuda, "Rechazado: Fondos insuficientes");
+		} 
+		
+		
+		deuda = pagosService.llamarTarjeta(tarjeta, monto);
+		if (deuda < 0 || pagosService.existeDeuda == false) {
+			
+			saldo = pagosService.devolverFondos(cuenta, monto);
+			return new Pago(saldo, -deuda, "Rechazado: La tarjeta indicada no posee tal deuda");	
+		}
+		
+		//llamarRegistro(ordenPago);
+		return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
 	}
 }

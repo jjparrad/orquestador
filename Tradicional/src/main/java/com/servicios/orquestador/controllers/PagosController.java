@@ -45,7 +45,7 @@ public class PagosController {
 		}
 		
 		String date = new Date() + "";
-		Registro registro = new Registro(cuenta, tar, monto, date);
+		Registro registro = new Registro(cuenta, tarjeta, monto, date);
 		
 		if(llamarRegistro(registro)) {
 			return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
@@ -130,6 +130,8 @@ public class PagosController {
 
 		HttpEntity<Registro> request = new HttpEntity<Registro>(registro);
 		RestTemplate restTemplate = new RestTemplate();
+		
+		//TODO Acá hay valores que se envían como null
 		ResponseEntity<Object> res = restTemplate.postForEntity(urlRegistros, request, Object.class);
 		
 		if(res.getStatusCodeValue() == 200) {
