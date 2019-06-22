@@ -8,6 +8,8 @@ import com.servicios.orquestador.models.OrdenPago;
 import com.servicios.orquestador.models.Pago;
 import com.servicios.orquestador.services.PagosService;
 
+import reactor.core.publisher.Mono;
+
 @RestController
 public class PagosController {
 	
@@ -15,31 +17,26 @@ public class PagosController {
 	private PagosService pagosService;
 	
 	@PutMapping("/pago")
-	public Pago pagar(@RequestBody OrdenPago ordenPago) {
-		double saldo;
-		double deuda;
+	public Mono<Pago> pagar(@RequestBody OrdenPago ordenPago) {
+		Mono<Double> monoSaldo;
+		Mono<Double> monoDeuda;
 		
 		String cuenta = ordenPago.getCuenta();
 		String tarjeta = ordenPago.getTarjeta();
 		double monto = ordenPago.getMonto();
 		
+		monoSaldo = pagosService.llamarCuenta(cuenta, monto);
+		monoDeuda = pagosService.llamarTarjeta(tarjeta, monto);
+		
+		
+		Mono<Pago> pago = monoSaldo.zipWith(monoDeuda)
+				.map(tupla -> {
+					double saldo = tupla.getT1();
+					double deuda = tupla.getT2();
 
-		saldo = pagosService.llamarCuenta(cuenta, monto);
-		if (saldo < 0){
-			
-			deuda = pagosService.getDeuda(tarjeta);
-			return new Pago(-saldo, deuda, "Rechazado: Fondos insuficientes");
-		} 
+					return new Pago(saldo, deuda, "Prueba");
+				});
 		
-		
-		deuda = pagosService.llamarTarjeta(tarjeta, monto);
-		if (deuda < 0 || pagosService.existeDeuda == false) {
-			
-			saldo = pagosService.devolverFondos(cuenta, monto);
-			return new Pago(saldo, -deuda, "Rechazado: La tarjeta indicada no posee tal deuda");	
-		}
-		
-		//llamarRegistro(ordenPago);
-		return new Pago(saldo, deuda, "Aceptado: Pago exitoso");
+		return pago;
 	}
 }

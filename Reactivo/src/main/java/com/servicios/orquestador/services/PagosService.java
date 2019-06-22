@@ -3,10 +3,10 @@ package com.servicios.orquestador.services;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.servicios.orquestador.models.OrdenCuenta;
@@ -33,20 +33,19 @@ public class PagosService {
 	 * @param monto Monto a debitar
 	 * @return Saldo Actual
 	 */
-	public Double llamarCuenta(String cuenta, double monto){
+	public Mono<Double> llamarCuenta(String cuenta, double monto){
 
 		OrdenCuenta orden = new OrdenCuenta(cuenta, monto);
-			
 		
-		HttpEntity<OrdenCuenta> request = new HttpEntity<OrdenCuenta>(orden);
-		RestTemplate restTemplate = new RestTemplate();
+		WebClient cliente = WebClient.create(urlCuentas);
 		
+		Mono<Double> response = cliente.put()
+				.uri("/debitar/{cuenta}", cuenta)
+				.syncBody(orden)
+				.retrieve()
+				.bodyToMono(Double.class);
 		
-		ResponseEntity<ResponseCuenta> res = restTemplate.exchange(urlCuentas + "debitar/" + cuenta, HttpMethod.PUT, request, ResponseCuenta.class);
-		
-		double valor = res.getBody().getSaldo();
-		
-		return valor;
+		return response.map(valor -> valor.doubleValue());
 	}
 	
 	/**
@@ -70,43 +69,25 @@ public class PagosService {
 		return valor;
 	}
 	
-	
-	//Este es el método en el que se está empezando la implementación del reactivo
 	/**
 	 * Reduce la deuda de una tarjeta de crédito específica
 	 * @param tarjeta Número de tarjeta a reducir deuda
 	 * @param monto Cantitad de deuda a reducir
 	 * @return Deuda restante
 	 */
-	public double llamarTarjeta(String tarjeta, double monto) {
+	public Mono<Double> llamarTarjeta(String tarjeta, double monto) {
+		
 		OrdenTarjeta orden = new OrdenTarjeta(tarjeta, monto);
 		
 		WebClient cliente = WebClient.create(urlTarjetas);
 		
-		Mono<ClientResponse> response = cliente.put().uri("/pago/{tarjeta}", tarjeta)
+		Mono<Double> response = cliente.put().uri("/pago/{tarjeta}", tarjeta)
 				.syncBody(orden)
-				.exchange();
+				.retrieve()
+				.bodyToMono(Double.class);
 		
-		response.subscribe((res) -> {
-			HttpStatus status = res.statusCode();
-			
-			Mono<Double> bodyToMono = res.bodyToMono(Double.class);
-			
-	        bodyToMono.subscribe((body) -> {
-	        	
-	        	
-	        	//El método hace el llamado y recibe la información como debería ser
-	        	//El problema es el scope en el que está
-	        	//La idea es que el método pueda retornar el BODY como un DOUBLE. No como un MONO<Double>
-	        	System.out.println("BODY: " + body);
-	        	System.out.println("STATUS CODE: " + status);
-	        });
-		});
-		
-		// Retorna 1.0 para que se pueda ejecutar. Solamente para que cumpla el "return double"
-		return 1.0; 
+		return response.map(valor -> valor.doubleValue());
 	}
-	
 	
 	/**
 	 * Retorna la deuda restante de una tarjeta de crédito específica
