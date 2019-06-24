@@ -33,7 +33,9 @@ public class PagosController {
 				.map(tupla -> {
 					double saldo = tupla.getT1();
 					double deuda = tupla.getT2();
-
+					
+					pagosService.llamarRegistro(ordenPago);
+					
 					return new Pago(saldo, deuda, "Prueba");
 				});
 		

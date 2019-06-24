@@ -1,19 +1,15 @@
 package com.servicios.orquestador.services;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import java.util.Date;
+
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.servicios.orquestador.models.OrdenCuenta;
 import com.servicios.orquestador.models.OrdenPago;
 import com.servicios.orquestador.models.OrdenTarjeta;
-import com.servicios.orquestador.models.Pago;
-import com.servicios.orquestador.models.ResponseCuenta;
+import com.servicios.orquestador.models.Registro;
 
 import reactor.core.publisher.Mono;
 
@@ -23,7 +19,7 @@ public class PagosService {
 	
 	private String urlCuentas = "http://localhost:8082/cuentaDeDepositos/";
 	private String urlTarjetas = "http://localhost:8081/tarjetaCredito/";
-	//private String urlRegistros = "http://localhost:8083/transaccion";
+	private String urlRegistros = "http://localhost:8083/transaccion/";
 	public boolean existeDeuda;
 	
 	
@@ -49,27 +45,6 @@ public class PagosService {
 	}
 	
 	/**
-	 * Devuelve fondos a una cuenta de depósito
-	 * @param cuenta Número de cuenta a devolver fondos
-	 * @param monto Cantidad a devolver
-	 * @return Saldo actual
-	 */
-	public Double devolverFondos(String cuenta, double monto) {
-		OrdenCuenta orden = new OrdenCuenta(cuenta, monto);
-			
-		
-		HttpEntity<OrdenCuenta> request = new HttpEntity<OrdenCuenta>(orden);
-		RestTemplate restTemplate = new RestTemplate();
-		
-		
-		ResponseEntity<ResponseCuenta> res = restTemplate.exchange(urlCuentas + "acreditar/" + cuenta, HttpMethod.PUT, request, ResponseCuenta.class);
-		
-		double valor = res.getBody().getSaldo();
-		
-		return valor;
-	}
-	
-	/**
 	 * Reduce la deuda de una tarjeta de crédito específica
 	 * @param tarjeta Número de tarjeta a reducir deuda
 	 * @param monto Cantitad de deuda a reducir
@@ -88,37 +63,24 @@ public class PagosService {
 		
 		return response.map(valor -> valor.doubleValue());
 	}
+
 	
-	/**
-	 * Retorna la deuda restante de una tarjeta de crédito específica
-	 * @param tarjeta Número de tarjeta de crédito a consultar
-	 * @return Deuda restante
-	 */
-	public Double getDeuda(String tarjeta) {
-		RestTemplate restTemplate = new RestTemplate();
-		ResponseEntity<Double> res = restTemplate.exchange(urlTarjetas + "deuda/" + tarjeta, HttpMethod.GET, null, Double.class);
+	public boolean llamarRegistro(OrdenPago ordenPago){
 		
-		double valor = res.getBody();
+		String date = new Date() + "";
+		Registro registro = new Registro(Long.parseLong(1+""), (ordenPago.getCuenta()), (ordenPago.getTarjeta()), ordenPago.getMonto(), date);
 		
-		if(res.getStatusCodeValue() == 200) {
-			return valor;
-		} else {
-			return -valor;
-		}
+		
+		WebClient cliente = WebClient.create(urlRegistros);
+		
+		cliente.post()
+				.uri("{numCuenta}/{numTarjeta}", ordenPago.getCuenta(), ordenPago.getTarjeta())
+				.body(BodyInserters.fromObject(registro))
+				.retrieve()
+				.bodyToMono(String.class)
+				.subscribe();
+		
+		return true;
 	}
-	
-	/* Método aún no integrado
-	private boolean llamarRegistro(OrdenPago orden){
-		
-		HttpEntity<String> request = new HttpEntity<String>(orden.toString());
-		RestTemplate restTemplate = new RestTemplate();
-		ResponseEntity<String> res = restTemplate.exchange(urlRegistros, HttpMethod.POST, request, String.class);
-		
-		if(res.getStatusCodeValue() == 201) {
-			return true;
-		} else {
-			return false;
-		}
-	}*/
 	
 }
