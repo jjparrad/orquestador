@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.servicios.orquestador.models.OrdenPago;
 import com.servicios.orquestador.models.Pago;
 import com.servicios.orquestador.services.PagosService;
@@ -25,14 +26,15 @@ public class PagosController {
 		String tarjeta = ordenPago.getTarjeta();
 		double monto = ordenPago.getMonto();
 		
+		
 		monoSaldo = pagosService.llamarCuenta(cuenta, monto);
 		monoDeuda = pagosService.llamarTarjeta(tarjeta, monto);
-		
+				
 		
 		Mono<Pago> pago = monoSaldo.zipWith(monoDeuda)
 				.map(tupla -> {
-					double saldo = tupla.getT1();
-					double deuda = tupla.getT2();
+					double saldo = tupla.getT1().doubleValue();
+					double deuda = tupla.getT2().doubleValue();
 					
 					pagosService.llamarRegistro(ordenPago);
 					

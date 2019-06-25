@@ -17,10 +17,9 @@ import reactor.core.publisher.Mono;
 public class PagosService {
 	
 	
-	private String urlCuentas = "http://localhost:8082/cuentaDeDepositos/";
-	private String urlTarjetas = "http://localhost:8081/tarjetaCredito/";
-	private String urlRegistros = "http://localhost:8083/transaccion/";
-	public boolean existeDeuda;
+	private String urlCuentas = "http://localhost:8086/api";
+	private String urlTarjetas = "http://localhost:8085/tarjeta";
+	private String urlRegistros = "http://localhost:8087/api";
 	
 	
 	/**
@@ -74,7 +73,7 @@ public class PagosService {
 		WebClient cliente = WebClient.create(urlRegistros);
 		
 		cliente.post()
-				.uri("{numCuenta}/{numTarjeta}", ordenPago.getCuenta(), ordenPago.getTarjeta())
+				.uri("/save/{numCuenta}/{numTarjeta}", ordenPago.getCuenta(), ordenPago.getTarjeta())
 				.body(BodyInserters.fromObject(registro))
 				.retrieve()
 				.bodyToMono(String.class)
